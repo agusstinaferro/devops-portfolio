@@ -38,7 +38,7 @@ Cada TP tiene un entregable concreto en GitHub que demuestra lo aprendido en pr�
 
 ## Proyectos por TP
 
-### 1 al 4 — Fundamentos
+### Mes 1 — Fundamentos
 
 | TP | Proyecto | Tecnologías | Link |
 |---|---|---|---|
@@ -47,7 +47,7 @@ Cada TP tiene un entregable concreto en GitHub que demuestra lo aprendido en pr�
 | 3 | Flujo Gitflow completo | Git, GitHub, branching | [→ ver repo](https://github.com/agusstinaferro/devops-TP03) |
 | 4 | YAML multi-entorno + diagnóstico de red | YAML, bash, ping, dig, curl | [→ ver repo](https://github.com/agusstinaferro/devops-TP04) |
 
-### 5 al 8 — Contenedores y CI/CD
+### Mes 2 — Contenedores y CI/CD
 
 | TP | Proyecto | Tecnologías | Link |
 |---|---|---|---|
@@ -56,7 +56,7 @@ Cada TP tiene un entregable concreto en GitHub que demuestra lo aprendido en pr�
 | 7 | Pipeline CI/CD completo | GitHub Actions, pytest, Docker Hub | [→ ver repo](https://github.com/agusstinaferro/devops-TP06) |
 | 8 | Stack de monitoreo | Prometheus, Grafana, Node Exporter | [→ ver repo](https://github.com/agusstinaferro/devops-TP08) |
 
-### 9 al 12 — Kubernetes e IaC
+### Mes 3 — Kubernetes e IaC
 
 | TP | Proyecto | Tecnologías | Link |
 |---|---|---|---|
