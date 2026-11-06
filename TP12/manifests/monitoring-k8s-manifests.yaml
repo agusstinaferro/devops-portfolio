@@ -1,27 +1,13 @@
-# ==========================================================
-# PROYECTO INTEGRADOR DEVOPS — STACK DE MONITOREO EN KUBERNETES
-# Manifiestos para Prometheus, Grafana, Node Exporter y cAdvisor
-# Namespace: devops-portfolio
-# ==========================================================
-
----
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: prometheus-sa
   namespace: devops-portfolio
-  labels:
-    app: prometheus
-    component: monitoring
-
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: prometheus-cluster-role
-labels:
-  app: prometheus
-  component: monitoring
 rules:
   - apiGroups: [""]
     resources:
@@ -39,15 +25,11 @@ rules:
     verbs: ["get", "list", "watch"]
   - nonResourceURLs: ["/metrics"]
     verbs: ["get"]
-
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: prometheus-role-binding
-labels:
-  app: prometheus
-  component: monitoring
 subjects:
   - kind: ServiceAccount
     name: prometheus-sa
@@ -56,7 +38,6 @@ roleRef:
   kind: ClusterRole
   name: prometheus-cluster-role
   apiGroup: rbac.authorization.k8s.io
-
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -74,17 +55,12 @@ data:
       external_labels:
         monitor: 'devops-portfolio'
         environment: 'kubernetes'
-
     rule_files:
       - "/etc/prometheus/alerts.yml"
-
     scrape_configs:
-      # 1. Auto-monitoreo de Prometheus
       - job_name: 'prometheus'
         static_configs:
           - targets: ['localhost:9090']
-
-      # 2. Descubrimiento dinámico del Backend Flask (Service Discovery)
       - job_name: 'kubernetes-pods'
         kubernetes_sd_configs:
           - role: pod
@@ -101,8 +77,6 @@ data:
             target_label: kubernetes_namespace
           - source_labels: [__meta_kubernetes_pod_name]
             target_label: kubernetes_pod_name
-
-      # 3. Métricas de los Nodos vía Node Exporter (DaemonSet)
       - job_name: 'node-exporter'
         kubernetes_sd_configs:
           - role: endpoints
@@ -112,8 +86,6 @@ data:
             regex: node-exporter
           - action: labelmap
             regex: __meta_kubernetes_service_label_(.+)
-
-      # 4. Métricas de los Contenedores vía cAdvisor (DaemonSet)
       - job_name: 'cadvisor'
         kubernetes_sd_configs:
           - role: endpoints
@@ -123,13 +95,11 @@ data:
             regex: cadvisor
           - action: labelmap
             regex: __meta_kubernetes_service_label_(.+)
-
   alerts.yml: |
     groups:
       - name: app-alerts
         interval: 30s
         rules:
-          # Alerta si el Backend no responde por más de 1 minuto
           - alert: AppDown
             expr: up{job="kubernetes-pods"} == 0
             for: 1m
@@ -138,8 +108,6 @@ data:
             annotations:
               summary: "Backend caído"
               description: "El pod de la API Flask no responde en el namespace {{ $labels.kubernetes_namespace }}."
-
-          # Alerta si el uso de CPU supera el 80%
           - alert: HighCPU
             expr: 100 - (avg by(instance)(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
             for: 2m
@@ -147,9 +115,7 @@ data:
               severity: warning
             annotations:
               summary: "CPU alta en {{ $labels.instance }}"
-              description: "El uso de CPU del nodo superó el 80% (Valor actual: {{ $value | printf \"%.1f\" }}%)."
-
-          # Alerta si la tasa de errores HTTP 5xx supera el 5%
+              description: "El uso de CPU del nodo superó el 80%."
           - alert: HighErrorRate
             expr: rate(app_requests_total{status=~"5.."}[5m]) / rate(app_requests_total[5m]) > 0.05
             for: 1m
@@ -158,8 +124,6 @@ data:
             annotations:
               summary: "Tasa de errores HTTP alta"
               description: "Más del 5% de las solicitudes HTTP de la API Flask están fallando."
-
-          # Alerta si el disco supera el 85% de capacidad
           - alert: DiskSpaceLow
             expr: (node_filesystem_size_bytes{mountpoint="/"} - node_filesystem_free_bytes{mountpoint="/"}) / node_filesystem_size_bytes{mountpoint="/"} > 0.85
             for: 5m
@@ -168,7 +132,6 @@ data:
             annotations:
               summary: "Espacio en disco bajo"
               description: "El almacenamiento en el volumen raíz superó el 85% de uso."
-
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -181,7 +144,6 @@ spec:
   resources:
     requests:
       storage: 2Gi
-
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -193,6 +155,8 @@ metadata:
     component: monitoring
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: prometheus
@@ -218,13 +182,13 @@ spec:
             httpGet:
               path: /-/ready
               port: 9090
-            initialDelaySeconds: 10
+            initialDelaySeconds: 5
             periodSeconds: 5
           livenessProbe:
             httpGet:
               path: /-/healthy
               port: 9090
-            initialDelaySeconds: 15
+            initialDelaySeconds: 10
             periodSeconds: 10
           resources:
             requests:
@@ -245,7 +209,6 @@ spec:
         - name: prometheus-storage-volume
           persistentVolumeClaim:
             claimName: prometheus-pvc
-
 ---
 apiVersion: v1
 kind: Service
@@ -263,11 +226,6 @@ spec:
       name: web
   selector:
     app: prometheus
-
-# ==============================================================================
-# CONFIGURACIÓN DE GRAFANA
-# ==============================================================================
-
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -290,7 +248,6 @@ data:
         jsonData:
           timeInterval: "15s"
           httpMethod: POST
-
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -313,7 +270,6 @@ data:
         updateIntervalSeconds: 10
         options:
           path: /var/lib/grafana/dashboards
-
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -326,7 +282,6 @@ spec:
   resources:
     requests:
       storage: 1Gi
-
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -384,7 +339,6 @@ spec:
         - name: dashboard-provider-config
           configMap:
             name: grafana-dashboards-provider
-
 ---
 apiVersion: v1
 kind: Service
@@ -402,11 +356,6 @@ spec:
       name: web
   selector:
     app: grafana
-
-# ==============================================================================
-# CONFIGURACIÓN DE EXPORTADORES (DAEMONSETS)
-# ==============================================================================
-
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -464,7 +413,6 @@ spec:
         - name: rootfs
           hostPath:
             path: /
-
 ---
 apiVersion: v1
 kind: Service
@@ -482,7 +430,6 @@ spec:
       name: scrape
   selector:
     app: node-exporter
-
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -502,6 +449,9 @@ spec:
         app: cadvisor
         component: monitoring
     spec:
+      automountServiceAccountToken: false
+      nodeSelector:
+        node-role.kubernetes.io/control-plane: "true"
       containers:
         - name: cadvisor
           image: gcr.io/cadvisor/cadvisor:v0.47.2
@@ -524,12 +474,6 @@ spec:
             - name: sys
               mountPath: /sys
               readOnly: true
-            - name: docker
-              mountPath: /var/lib/docker
-              readOnly: true
-            - name: disk
-              mountPath: /dev/disk
-              readOnly: true
       volumes:
         - name: rootfs
           hostPath:
@@ -540,13 +484,6 @@ spec:
         - name: sys
           hostPath:
             path: /sys
-        - name: docker
-          hostPath:
-            path: /var/lib/docker
-        - name: disk
-          hostPath:
-            path: /dev/disk
-
 ---
 apiVersion: v1
 kind: Service
