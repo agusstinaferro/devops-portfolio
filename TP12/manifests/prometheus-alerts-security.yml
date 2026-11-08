@@ -1,0 +1,42 @@
+groups:
+  - name: AlertasSeguridadNotesApp
+    rules:
+      - alert: IngressPicoErrores4xx5xx
+        expr: sum(rate(nginx_ingress_controller_requests{status=~"4..|5.."}[2m])) > 10
+        for: 1m
+        labels:
+          severity: critical
+          category: ciberseguridad
+        annotations:
+          summary: "Posible escaneo de vulnerabilidades o ataque de fuerza bruta"
+          description: "El NGINX Ingress Controller registra mas de 10 peticiones fallidas por segundo."
+
+      - alert: PodReiniciosFrecuentesSeguridad
+        expr: increase(kube_pod_container_status_restarts_total{namespace="devops-portfolio"}[5m]) > 2
+        for: 1m
+        labels:
+          severity: warning
+          category: infraestructura
+        annotations:
+          summary: "Pod reiniciandose repetidamente en el cluster"
+          description: "Un pod se ha reiniciado mas de 2 veces en 5 minutos."
+
+      - alert: InvasionIntentosAuthFallidos
+        expr: sum(rate(app_requests_total{status=~"401|404", endpoint="/login"}[2m])) > 5
+        for: 30s
+        labels:
+          severity: critical
+          category: aplicacion
+        annotations:
+          summary: "Multiples intentos de inicio de sesion fallidos"
+          description: "Se detectan mas de 5 fallos de autenticacion por segundo en la API."
+
+      - alert: PicoErroresConexionBaseDatos
+        expr: sum(rate(app_db_errors_total[2m])) > 2
+        for: 30s
+        labels:
+          severity: critical
+          category: persistencia
+        annotations:
+          summary: "Pico analomo de errores en PostgreSQL"
+          description: "La API registra consultas fallidas o desconexiones repetidas."
